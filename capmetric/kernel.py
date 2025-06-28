@@ -4,7 +4,7 @@ from torch import Tensor, nn
 
 
 class ApproximationCapacityKernel(nn.Module):
-    """Computes the approximation capacity for a binary classification problem."""
+    """Computes the approximation capacity for a classification problem."""
 
     def __init__(
             self,

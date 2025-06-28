@@ -2,11 +2,10 @@ from typing import Optional
 from collections import defaultdict
 
 import torch
-from torch.utils.data import TensorDataset
 from pytorch_lightning.callbacks import Callback
 from pytorch_lightning.utilities.memory import garbage_collection_cuda
 
-from capmetric.metric import CAP
+from capmetric.metric import ApproximationCapacity
 
 
 class CAP_Callback(Callback):
@@ -27,7 +26,7 @@ class CAP_Callback(Callback):
     ):
         super().__init__()
         self.loss_name = loss_name
-        self.capmetric = CAP(
+        self.capmetric = ApproximationCapacity(
             beta0=beta0,
             n_epochs=n_epochs,
             lr=lr,

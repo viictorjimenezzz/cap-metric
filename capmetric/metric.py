@@ -15,20 +15,67 @@ from capmetric.binary import (
 )
 
 
-class CAP(Metric):
+class ApproximationCapacity(Metric):
     """
-    Approximation Capacity (CAP) Metric implemented with torchmetrics.
+    Approximation Capacity (CAP) Metric for classification tasks.
+
+    The metric maximizes the mutual information between two sets of classification
+    scores (e.g. log-probabilities, reconstruction losses, ...) parametrizing their
+    distribution over the hypothesis space (i.e. the set of possible clustering
+    assignments) using Gibbs distributions of inverse temperature `beta`.
+    
+        CAP ∝ log(Z_12 / (Z_1 * Z_2))
+        
+    Where Z_i are partition functions over the set of clustering assignments, computed
+    using different energy functions and constraints.
+
+    Functions that are imported:
+    - Energy: Determines the probability of a specific clustering assignment.
+    - Normalization: Normalizes model outputs (logits, loss...) to [0,1] range.
+    - Regularization: Enforces constraints on the hypothesis space to implicitly
+        delimit a feasible clustering assignments. For instance, by limiting
+        the number of observations assigned to a specific cluster.
 
     Args:
-        kernel: The ApproximationCapacityKernel instance
-        dataset: The ReconstructionLoss dataset
-        batch_size: Batch size for processing the dataset
-        n_epochs: Number of optimization epochs
-        learning_rate: Learning rate for beta optimization
-        compute_on_step: Whether to compute the metric on each step
-        dist_sync_on_step: Synchronize metric state across processes at each step
-        process_group: DDP process group
-        dist_sync_fn: Function to synchronize metrics across processes
+        beta0: Initial inverse temperature parameter for Gibbs distribution. 
+        normalization_type: Method to normalize reconstruction losses to [0,1].
+            Options: "minmax", "quantile", "sigmoid" (default: "minmax")
+        normalization_params: Parameters for normalization method.
+        energy_type: Energy function for Gibbs distribution over anomaly assignments.
+            Options: "baseline", "focal", "exponential", "margin", "contrastive", "adaptive" 
+        energy_params: Parameters for energy function.
+        regularization_type: Method to enforce anomaly count constraints.
+            Options: "none", "threshold_max", "threshold_mean", "threshold_zero", 
+        regularization_params: Parameters for regularization method.
+        binary: Whether to use binary (anomaly/normal) or multi-class classification.
+            Currently only binary=True is supported (default: True)
+        lr: Learning rate for beta parameter optimization during metric computation (default: 0.01)
+        n_epochs: Number of optimization epochs for beta parameter learning (default: 5)
+        batch_size: Batch size for processing reconstruction loss pairs (default: 64)
+        process_group: Process group for distributed training (DDP support)
+        dist_sync_fn: Function to synchronize metric state across processes
+
+    Torchmetrics Arguments:
+        is_differentiable: False (metric computation is not differentiable)
+        higher_is_better: True (higher CAP indicates better anomaly detection)
+        full_state_update: False (uses incremental state updates)
+
+    Usage Example:
+        ```python
+        # Basic usage with default baseline energy
+        cap_metric = ApproximationCapacityMetric()
+        
+        # Advanced usage with contrastive energy and constraints
+        cap_metric = ApproximationCapacityMetric(
+            energy_type="contrastive",
+            energy_params={"center": 0.75},
+            regularization_type="threshold_max",
+            regularization_params={"maxcount": 50}
+        )
+        
+        # Compute CAP score
+        cap_score = cap_metric(loss_batch1, loss_batch2)
+        ```
     """
 
     is_differentiable = False

@@ -161,15 +161,15 @@ class ApproximationCapacity(Metric):
 
         return regularizer_fn
 
-    def update(self, loss1: Tensor, loss2: Tensor, **kwargs):
+    def update(self, logits1: Tensor, logits2: Tensor, **kwargs):
         """Optimize beta parameter over multiple epochs."""
         self.reset()
 
-        # Normalize the losses:
-        loss1, loss2 = self.normalizer_fn(loss1, loss2)
+        # Normalize the logits:
+        logits1, logits2 = self.normalizer_fn(logits1, logits2)
 
-        # Add loss mean and std to the energy parameters:
-        combined = torch.cat([loss1, loss2], dim=0)
+        # Add mean and std to the energy parameters:
+        combined = torch.cat([logits1, logits2], dim=0)
         self.energy_params.update({
             "mean": combined.mean().item(),
             "std": combined.std().item(),
@@ -185,7 +185,7 @@ class ApproximationCapacity(Metric):
         optimizer = optim.Adam([kernel.beta], lr=self.learning_rate)
 
         dataloader = DataLoader(
-            TensorDataset(loss1, loss2),
+            TensorDataset(logits1, logits2),
             batch_size=self.batch_size,
             shuffle=True,
             num_workers=0,
@@ -201,11 +201,11 @@ class ApproximationCapacity(Metric):
 
             with torch.set_grad_enabled(True):
                 for batch in dataloader:
-                    loss1, loss2 = batch[0].to(dev), batch[1].to(dev)
+                    logits1, logits2 = batch[0].to(dev), batch[1].to(dev)
 
                     # Maximize capacity
                     optimizer.zero_grad()
-                    loss = -kernel(loss1, loss2)
+                    loss = -kernel(logits1, logits2)
                     loss.backward()
                     optimizer.step()
 
@@ -218,8 +218,8 @@ class ApproximationCapacity(Metric):
         with torch.no_grad():
             kernel.reset()
             for batch in dataloader:
-                loss1, loss2 = batch[0].to(dev), batch[1].to(dev)
-                _ = kernel.evaluate(loss1, loss2, beta=best_beta)
+                logits1, logits2 = batch[0].to(dev), batch[1].to(dev)
+                _ = kernel.evaluate(logits1, logits2, beta=best_beta)
 
             # Set a value to the metric state
             self.cap.fill_(kernel.cap.item())

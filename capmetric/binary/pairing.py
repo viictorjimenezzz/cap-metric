@@ -31,7 +31,7 @@ def random(
     large_indices = torch.randperm(len(large_tensor))[:len(small_tensor)]
     
     # Map back to original tensor order
-    if swapped:
+    if not swapped:
         return small_indices, large_indices
     return large_indices, small_indices
 
@@ -83,20 +83,23 @@ def label(
     small_indices = torch.cat(small_indices_list)
     large_indices = torch.cat(large_indices_list)
     
-    if swapped:
+    if not swapped:
         return small_indices, large_indices
     return large_indices, small_indices
 
 
-def cdf(
+def absolute(
     tensor1: Tensor,
     tensor2: Tensor
 ) -> Tuple[Tensor, Tensor]:
     """
-    Empirical CDF pairing: matches samples based on their percentile positions.
+    Absolute value pairing: matches samples based on absolute values.
+
+    It uses searchsorted to find where each value from the small tensor would be 
+    inserted into the sorted large tensor, which pairs values based on their 
+    absolute magnitudes.
     
-    Rationale: Preserves distributional relationships by pairing samples at similar
-    percentile positions in their respective distributions.
+    Rationale: Pair based on the value of the tensors.
     """
     small_tensor, large_tensor, swapped = _get_small_large(tensor1, tensor2)
     
@@ -109,6 +112,44 @@ def cdf(
     large_indices = large_sort_indices[large_indices]
     small_indices = torch.arange(len(small_tensor))
     
-    if swapped:
+    if not swapped:
+        return small_indices, large_indices
+    return large_indices, small_indices
+
+
+def cdf(
+    tensor1: torch.Tensor,
+    tensor2: torch.Tensor
+) -> Tuple[torch.Tensor, torch.Tensor]:
+    """
+    Empirical CDF pairing: matches samples based on their percentile positions.
+    
+    Rationale: Preserves distributional relationships by pairing samples at similar
+    percentile positions in their respective distributions.
+    """
+    small_tensor, large_tensor, swapped = _get_small_large(tensor1, tensor2)
+    
+    # Get sorted indices (ranks) for both tensors
+    small_sorted_indices = torch.argsort(small_tensor)
+    large_sorted_indices = torch.argsort(large_tensor)
+    
+    # For each position in small tensor, find corresponding percentile in large tensor
+    small_size = len(small_tensor)
+    large_size = len(large_tensor)
+    
+    # Map each rank in small tensor to corresponding rank in large tensor
+    large_ranks = torch.round(
+        (torch.arange(small_size, dtype=torch.float) / (small_size - 1)) * (large_size - 1)
+    ).long()
+    
+    # Handle edge case for single element
+    if small_size == 1:
+        large_ranks = torch.tensor([large_size // 2])  # Use median
+    
+    # Get the actual indices
+    small_indices = small_sorted_indices
+    large_indices = large_sorted_indices[large_ranks]
+    
+    if not swapped:
         return small_indices, large_indices
     return large_indices, small_indices

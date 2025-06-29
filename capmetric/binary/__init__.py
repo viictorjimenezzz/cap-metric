@@ -10,6 +10,7 @@ __all__ = ["get_normalizer_fn", "get_energy_fn", "get_regularizer_fn"]
 from capmetric.binary.pairing import (
     random, 
     label,
+    absolute,
     cdf
 )
 
@@ -17,19 +18,21 @@ def get_pairing_fn(
     pairing_type: str,
 ):  
     """Get the regularization function based on type."""
-
     
     if pairing_type == "none": # get the first elements
         return lambda tensor1, tensor2: (
-        tensor1[: min(len(tensor1), len(tensor2))],
-        tensor2[: min(len(tensor1), len(tensor2))]
-    )
+            torch.arange(min(len(tensor1), len(tensor2))),
+            torch.arange(min(len(tensor1), len(tensor2)))
+        )
     
     elif pairing_type == "random":
         return random
 
     elif pairing_type == "label":
         return label
+
+    elif pairing_type == "absolute":
+        return absolute
 
     elif pairing_type == "cdf":
         return cdf

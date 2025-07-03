@@ -4,7 +4,7 @@ import torch
 from torch import Tensor
 
 
-__all__ = ["get_normalizer_fn", "get_energy_fn", "get_regularizer_fn"]
+__all__ = ["get_pairing_fn", "get_normalizer_fn", "get_energy_fn", "get_regularizer_fn"]
 
 
 from capmetric.binary.pairing import (

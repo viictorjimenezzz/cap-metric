@@ -95,6 +95,7 @@ class ApproximationCapacity(Metric):
         lr: Optional[float] = 0.01,
         n_epochs: Optional[int] = 5,
         batch_size: Optional[int] = 64,
+        device: Optional[str] = "cpu",
         process_group: Optional[Any] = None,
         dist_sync_fn: Optional[Callable] = None,
     ):  
@@ -118,6 +119,7 @@ class ApproximationCapacity(Metric):
         self.regularization_params = regularization_params or {}
 
         # Learning parameters:
+        self.dev = device
         self.n_epochs = n_epochs
         self.learning_rate = lr
         self.batch_size = batch_size
@@ -180,8 +182,8 @@ class ApproximationCapacity(Metric):
         kernel = ApproximationCapacityKernel(
             beta0=self.beta0,
             energy_fn=self._get_energy_fn(),
-        )
-        dev = kernel.beta.device
+        ).to(self.dev)
+        
         optimizer = optim.Adam([kernel.beta], lr=self.learning_rate)
 
         dataloader = DataLoader(
@@ -201,11 +203,11 @@ class ApproximationCapacity(Metric):
 
             with torch.set_grad_enabled(True):
                 for batch in dataloader:
-                    logits1, logits2 = batch[0].to(dev), batch[1].to(dev)
+                    logits1, logits2 = batch[0].to(self.dev), batch[1].to(self.dev)
 
                     # Maximize capacity
                     optimizer.zero_grad()
-                    loss = -kernel(logits1, logits2)
+                    loss = - kernel(logits1, logits2)
                     loss.backward()
                     optimizer.step()
 
@@ -218,7 +220,7 @@ class ApproximationCapacity(Metric):
         with torch.no_grad():
             kernel.reset()
             for batch in dataloader:
-                logits1, logits2 = batch[0].to(dev), batch[1].to(dev)
+                logits1, logits2 = batch[0].to(self.dev), batch[1].to(self.dev)
                 _ = kernel.evaluate(logits1, logits2, beta=best_beta)
 
             # Set a value to the metric state

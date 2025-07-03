@@ -18,7 +18,7 @@ class ApproximationCapacityKernel(nn.Module):
         self.beta = torch.nn.Parameter(
             torch.tensor([beta0], dtype=torch.float), requires_grad=True
         )
-        self.cap = torch.tensor([0.0], dtype=torch.float)
+        self.cap = torch.tensor([0.0], dtype=torch.float, device="cpu")
 
     def compute_mutual_information(
         self,
@@ -31,13 +31,16 @@ class ApproximationCapacityKernel(nn.Module):
         This is the original implementation but with different energy functions.
         """
         beta = self.beta if beta is None else beta
+        dev = self.beta.device
 
         # Compute energy:
         n = len(prob1)
-        e1_0 = self.energy_fn(prob1, torch.zeros(n, dtype=torch.int8))
-        e1_1 = self.energy_fn(prob1, torch.ones(n, dtype=torch.int8))
-        e2_0 = self.energy_fn(prob2, torch.zeros(n, dtype=torch.int8))
-        e2_1 = self.energy_fn(prob2, torch.ones(n, dtype=torch.int8))
+        ones = torch.ones(n, dtype=torch.int8, device=dev)
+        print(f"Using device: {dev}")
+        e1_0 = self.energy_fn(prob1.to(dev), 0 * ones)
+        e1_1 = self.energy_fn(prob1.to(dev), ones)
+        e2_0 = self.energy_fn(prob2.to(dev), 0 * ones)
+        e2_1 = self.energy_fn(prob2.to(dev), ones)
 
         # Factorized mutual information computation
         num = torch.log(
@@ -62,7 +65,7 @@ class ApproximationCapacityKernel(nn.Module):
         """Evaluation without gradient computation."""
         with torch.set_grad_enabled(False):
             cap = self.compute_mutual_information(loss1, loss2, beta=beta)
-            self.cap = self.cap + cap
+            self.cap = self.cap + cap.cpu()
             return cap
 
     def reset(self):

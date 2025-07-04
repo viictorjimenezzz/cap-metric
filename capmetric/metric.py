@@ -225,6 +225,9 @@ class ApproximationCapacity(Metric):
 
             # Set a value to the metric state
             self.cap.fill_(kernel.cap.item())
+
+        kernel.to("cpu")
+        del logits1, logits2, kernel; gc.collect(); torch.cuda.empty_cache()
         return
 
     def compute(self) -> Tensor:

@@ -36,7 +36,6 @@ class ApproximationCapacityKernel(nn.Module):
         # Compute energy:
         n = len(prob1)
         ones = torch.ones(n, dtype=torch.int8, device=dev)
-        print(f"Using device: {dev}")
         e1_0 = self.energy_fn(prob1.to(dev), 0 * ones)
         e1_1 = self.energy_fn(prob1.to(dev), ones)
         e2_0 = self.energy_fn(prob2.to(dev), 0 * ones)

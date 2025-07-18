@@ -196,7 +196,8 @@ class ApproximationCapacity(Metric):
         # Optimization loop:
         best_beta = 0.0
         best_cap = -float("inf")
-        for _ in tqdm(
+        self.epoch_logs = []
+        for epoch in tqdm(
             range(self.n_epochs), desc="CAP Optimization Progress", unit="epoch"
         ):
             kernel.reset()
@@ -211,10 +212,19 @@ class ApproximationCapacity(Metric):
                     loss.backward()
                     optimizer.step()
 
+            # Log epoch info
+            current_cap = kernel.cap.item()
+            current_beta = kernel.beta.item()
+            self.epoch_logs.append({
+                'cap': current_cap,
+                'beta': current_beta,
+            })
+            
             # Update best beta if this epoch is better
-            if kernel.cap.item() > best_cap:
-                best_cap = kernel.cap.item()
+            if current_cap > best_cap:
+                best_cap = current_cap
                 best_beta = kernel.beta.clone().detach()
+
 
         # Perform a final evaluation with the best beta
         with torch.no_grad():
@@ -223,12 +233,11 @@ class ApproximationCapacity(Metric):
                 logits1, logits2 = batch[0].to(self.dev), batch[1].to(self.dev)
                 _ = kernel.evaluate(logits1, logits2, beta=best_beta)
 
-            # Set a value to the metric state
-            self.cap.fill_(kernel.cap.item())
+            # Set the normalized capacity value to the metric state
+            self.cap.fill_(kernel.capacity.item())
 
         kernel.to("cpu")
         del logits1, logits2, kernel; gc.collect(); torch.cuda.empty_cache()
-        return
 
     def compute(self) -> Tensor:
         """Return the computed CAP value."""

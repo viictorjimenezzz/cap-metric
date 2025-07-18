@@ -99,7 +99,7 @@ def absolute(
     inserted into the sorted large tensor, which pairs values based on their 
     absolute magnitudes.
     
-    Rationale: Pair based on the value of the tensors.
+    Rationale: Pair based on the value of the tensors, to provide an upper bound on the metric.
     """
     small_tensor, large_tensor, swapped = _get_small_large(tensor1, tensor2)
     
@@ -122,10 +122,10 @@ def cdf(
     tensor2: torch.Tensor
 ) -> Tuple[torch.Tensor, torch.Tensor]:
     """
-    Empirical CDF pairing: matches samples based on their percentile positions.
+    Empirical CDF pairing: matches samples based on their percentile ranks.
     
     Rationale: Preserves distributional relationships by pairing samples at similar
-    percentile positions in their respective distributions.
+    percentile ranks in their respective distributions.
     """
     small_tensor, large_tensor, swapped = _get_small_large(tensor1, tensor2)
     

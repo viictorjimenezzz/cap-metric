@@ -19,6 +19,7 @@ class ApproximationCapacityKernel(nn.Module):
             torch.tensor([beta0], dtype=torch.float), requires_grad=True
         )
         self.cap = torch.tensor([0.0], dtype=torch.float, device="cpu")
+        self.total_samples = 0
 
     def compute_mutual_information(
         self,
@@ -53,7 +54,7 @@ class ApproximationCapacityKernel(nn.Module):
         return mi
 
     def forward(self, loss1: Tensor, loss2: Tensor):
-        """Forward pass with gradient computation."""
+        """Forward pass with gradient computation. Used during optimization (unnormalized)."""
         self.beta.data.clamp_(min=0.0)
         with torch.set_grad_enabled(True):
             cap = self.compute_mutual_information(loss1, loss2)
@@ -61,15 +62,24 @@ class ApproximationCapacityKernel(nn.Module):
             return cap
 
     def evaluate(self, loss1: Tensor, loss2: Tensor, beta: float):
-        """Evaluation without gradient computation."""
+        """Evaluation without gradient computation. Tracks total_samples for normalization."""
         with torch.set_grad_enabled(False):
             cap = self.compute_mutual_information(loss1, loss2, beta=beta)
             self.cap = self.cap + cap.cpu()
+            self.total_samples += len(loss1)
             return cap
 
     def reset(self):
         """Reset accumulated state for a new computation sequence."""
         self.cap = torch.tensor([0.0], dtype=torch.float)
+        self.total_samples = 0
+
+    @property
+    def capacity(self):
+        """Get the final capacity with proper normalization."""
+        if self.total_samples == 0:
+            return self.cap
+        return self.cap / self.total_samples
 
     @property
     def module(self):

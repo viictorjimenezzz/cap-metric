@@ -10,6 +10,7 @@ class ApproximationCapacityKernel(nn.Module):
             self,
             beta0: float,
             energy_fn: Callable,
+            normalize_gradients: Optional[bool] = False
         ):  
         super().__init__()
         self.energy_fn = energy_fn
@@ -59,7 +60,7 @@ class ApproximationCapacityKernel(nn.Module):
         with torch.set_grad_enabled(True):
             cap = self.compute_mutual_information(loss1, loss2)
             self.cap = self.cap + cap.detach().to(self.cap.device)
-            return cap
+            return cap if not self.normalize_gradients else cap / len(loss1)
 
     def evaluate(self, loss1: Tensor, loss2: Tensor, beta: float):
         """Evaluation without gradient computation. Tracks total_samples for normalization."""

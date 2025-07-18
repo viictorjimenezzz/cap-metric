@@ -96,6 +96,7 @@ class ApproximationCapacity(Metric):
         n_epochs: Optional[int] = 5,
         batch_size: Optional[int] = 64,
         device: Optional[str] = "cpu",
+        normalize_gradients: Optional[bool] = False,
         process_group: Optional[Any] = None,
         dist_sync_fn: Optional[Callable] = None,
     ):  
@@ -123,6 +124,7 @@ class ApproximationCapacity(Metric):
         self.n_epochs = n_epochs
         self.learning_rate = lr
         self.batch_size = batch_size
+        self.normalize_gradients = normalize_gradients
 
         # Initialize CAP:
         self.add_state("cap", default=torch.tensor(0.0), dist_reduce_fx="sum")
@@ -182,6 +184,7 @@ class ApproximationCapacity(Metric):
         kernel = ApproximationCapacityKernel(
             beta0=self.beta0,
             energy_fn=self._get_energy_fn(),
+            normalize_gradients=self.normalize_gradients
         ).to(self.dev)
         
         optimizer = optim.Adam([kernel.beta], lr=self.learning_rate)

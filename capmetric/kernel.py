@@ -14,6 +14,7 @@ class ApproximationCapacityKernel(nn.Module):
         ):  
         super().__init__()
         self.energy_fn = energy_fn
+        self.normalize_gradients = normalize_gradients
         
         # Learnable parameters
         self.beta = torch.nn.Parameter(

@@ -168,7 +168,6 @@ class ApproximationCapacity(Metric):
     def update(self, logits1: Tensor, logits2: Tensor, **kwargs):
         """Optimize beta parameter over multiple epochs."""
         self.reset()
-        print("grad enabled at update entry:", torch.is_grad_enabled())
 
         # Normalize the logits:
         logits1, logits2 = self.normalizer_fn(logits1, logits2)
